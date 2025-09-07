@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternity Ring Diamond Calculator (v3 - Mobile Friendly)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            background-color: #f4f7f6;
+            gap: 40px;
+        }
+        .container {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px
+ 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 380px; /* ปรับขนาดให้กระทัดรัดขึ้น */
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 15px;
+            background-color: #e8f4fd;
+            border-radius: 8px;
+        }
+        .visual-container {
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        #ring-visual {
+            width: 100%;
+            aspect-ratio: 1/1;
+            margin-top: 20px;
+            background-color: #000000;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 16px;
+        }
+        .svg-text-main, .svg-text-sub {
+            font-family: monospace;
+            fill: #2ecc71;
+            text-anchor: middle;
+            /* --- จุดที่แก้ไข: ย้าย font-size ไปคำนวณใน JS --- */
+        }
+
+        /* --- จุดที่แก้ไข: เพิ่ม Media Query สำหรับ Mobile --- */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                align-items: center;
+                padding: 15px;
+                gap: 25px;
+            }
+            .container, .visual-container {
+                max-width: 100%; /* ทำให้เต็มความกว้างจอ */
+            }
+            h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>เครื่องคำนวณเพชรแหวน Eternity</h1>
+        <div class="form-group">
+            <label for="ring-size">1. ไซส์แหวน (เส้นรอบวงใน, มม.):</label>
+            <input type="number" id="ring-size" value="57" step="0.1">
+        </div>
+        <div class="form-group">
+            <label for="diamond-size">2. ขนาดเพชร (กะรัต):</label>
+            <select id="diamond-size"></select>
+        </div>
+        <div class="form-group">
+            <label for="spacing">3. ระยะห่างระหว่างเพชร (มม.):</label>
+            <input type="number" id="spacing" value="0.15" step="0.01">
+        </div>
+        <button onclick="calculateAndDraw()">คำนวณและวาดภาพ</button>
+        <div id="result">
+            ผลลัพธ์จะแสดงที่นี่
+        </div>
+    </div>
+
+    <div class="visual-container">
+        <h2>ภาพจำลองด้านข้าง</h2>
+        <div id="ring-visual">
+            กรุณากดคำนวณเพื่อแสดงภาพ
+        </div>
+    </div>
+
+    <script>
+        const diamondData = [
+            { carat: 0.01, diameter: 1.3, height: 0.8 }, { carat: 0.02, diameter: 1.7, height: 1.0 },
+            { carat: 0.03, diameter: 2.0, height: 1.2 }, { carat: 0.05, diameter: 2.5, height: 1.5 },
+            { carat: 0.07, diameter: 2.7, height: 1.6 }, { carat: 0.10, diameter: 3.0, height: 1.8 },
+            { carat: 0.12, diameter: 3.2, height: 1.9 }, { carat: 0.15, diameter: 3.4, height: 2.1 },
+            { carat: 0.20, diameter: 3.8, height: 2.3 }, { carat: 0.25, diameter: 4.1, height: 2.5 },
+            { carat: 0.30, diameter: 4.3, height: 2.6 },
+        ];
+
+        const diamondSelect = document.getElementById('diamond-size');
+        diamondData.forEach((diamond, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = `${diamond.carat.toFixed(2)} ct (${diamond.diameter} mm)`;
+            diamondSelect.appendChild(option);
+        });
+        
+        function calculateAndDraw() {
+            const ringCircumference = parseFloat(document.getElementById('ring-size').value);
+            const spacing = parseFloat(document.getElementById('spacing').value);
+            const selectedDiamondIndex = parseInt(document.getElementById('diamond-size').value);
+            const selectedDiamond = diamondData[selectedDiamondIndex];
+
+            if (isNaN(ringCircumference) || ringCircumference <= 0) {
+                document.getElementById('result').textContent = "กรุณาใส่ไซส์แหวนที่ถูกต้อง";
+                return;
+            }
+            
+            const innerRadius = ringCircumference / (2 * Math.PI);
+            const culetClearance = 0.40;
+            const pavilionHeight = selectedDiamond.diameter * 0.431; 
+
+            const pitchRadius = innerRadius + culetClearance + pavilionHeight;
+            const pitchCircumference = 2 * Math.PI * pitchRadius;
+
+            const spacePerDiamond = selectedDiamond.diameter + spacing;
+            const numDiamonds = Math.floor(pitchCircumference / spacePerDiamond);
+
+            document.getElementById('result').innerHTML = `จำนวนเพชรที่ใช้: <span style="color: #007bff;">${numDiamonds}</span> เม็ด`;
+            drawRing(ringCircumference, numDiamonds, selectedDiamond, innerRadius, pitchRadius);
+        }
+
+        function drawRing(circumference, numDiamonds, diamond, innerRadius, pitchRadius) {
+            const visualDiv = document.getElementById('ring-visual');
+            visualDiv.innerHTML = ''; 
+
+            const svgNS = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(svgNS, "svg");
+            svg.setAttribute("width", "100%");
+            svg.setAttribute("height", "100%");
+            
+            const viewBoxSize = pitchRadius * 2 + diamond.diameter * 2 + (innerRadius * 0.5);
+            const center = viewBoxSize / 2;
+            svg.setAttribute("viewBox", `0 0 ${viewBoxSize} ${viewBoxSize}`);
+
+            const ringRail = document.createElementNS(svgNS, "circle");
+            ringRail.setAttribute("cx", center);
+            ringRail.setAttribute("cy", center);
+            ringRail.setAttribute("r", innerRadius);
+            ringRail.setAttribute("fill", "none");
+            ringRail.setAttribute("stroke", "red");
+            ringRail.setAttribute("stroke-width", "0.5");
+            svg.appendChild(ringRail);
+            
+            // --- จุดที่แก้ไข: คำนวณขนาด Font และตำแหน่งแบบไดนามิก ---
+            const mainTextSize = innerRadius * 0.55;
+            const subTextSize = innerRadius * 0.45;
+            
+            const ringSizeText = document.createElementNS(svgNS, "text");
+            ringSizeText.setAttribute("x", center);
+            ringSizeText.setAttribute("y", center - mainTextSize * 0.1); // ขยับ y เล็กน้อย
+            ringSizeText.setAttribute("class", "svg-text-main");
+            ringSizeText.setAttribute("font-size", mainTextSize); // กำหนดขนาดที่นี่
+            ringSizeText.textContent = circumference.toFixed(0);
+            svg.appendChild(ringSizeText);
+            
+            const pcsText = document.createElementNS(svgNS, "text");
+            pcsText.setAttribute("x", center);
+            pcsText.setAttribute("y", center + mainTextSize * 0.8); // ขยับ y ตามขนาด font
+            pcsText.setAttribute("class", "svg-text-sub");
+            pcsText.setAttribute("font-size", subTextSize); // กำหนดขนาดที่นี่
+            pcsText.textContent = `${numDiamonds}pcs`;
+            svg.appendChild(pcsText);
+
+            if (numDiamonds > 0) {
+                const pavilionHeight = diamond.diameter * 0.431;
+                const crownHeight = diamond.height - pavilionHeight > 0 ? diamond.height - pavilionHeight : diamond.diameter * 0.14;
+                const diamondPathData = `M0,0 L${-diamond.diameter/2},${-pavilionHeight} L${-diamond.diameter/2},${-(pavilionHeight+crownHeight)} L0,${-diamond.height} L${diamond.diameter/2},${-(pavilionHeight+crownHeight)} L${diamond.diameter/2},${-pavilionHeight} Z`;
+
+                const angleStep = 360 / numDiamonds;
+                for (let i = 0; i < numDiamonds; i++) {
+                    const angle = i * angleStep;
+                    const x = center + pitchRadius * Math.sin(angle * Math.PI / 180);
+                    const y = center - pitchRadius * Math.cos(angle * Math.PI / 180);
+
+                    const diamondShape = document.createElementNS(svgNS, "path");
+                    diamondShape.setAttribute("d", diamondPathData);
+                    diamondShape.setAttribute("fill", "#aed6f1");
+                    diamondShape.setAttribute("stroke", "#3498db");
+                    diamondShape.setAttribute("stroke-width", "0.2");
+                    diamondShape.setAttribute("transform", `translate(${x}, ${y}) rotate(${angle})`);
+                    svg.appendChild(diamondShape);
+                }
+            }
+            visualDiv.appendChild(svg);
+        }
+        window.onload = calculateAndDraw;
+    </script>
+</body>
+</html>
